@@ -67,7 +67,7 @@ CI (`.github/workflows/ci.yml`) bumps the version from conventional commits (cog
 before the GitHub release exists, publishes the crates to crates.io in dependency order
 (`emit-protocol`, `emit-protocol-abi`, `emit-circuits`) and the circuit assets (`manifest.toml`,
 `resources.tar.gz`, `catalog.json`) to `https://circuits.zk-experiments.dev/emit-protocol/<version>/`.
-The GitHub release comes last, with the assets attached. Secrets: `CARGO_REGISTRY_TOKEN`,
+The GitHub release comes last, with the assets attached. Secrets: `CRATES_PUBLISHING_TOKEN` (the crates.io token),
 `R2_ZK_EXPERIMENTS_TOKEN` (with the `R2_CIRCUITS_ZK_EXPERIMENTS_BUCKET` and `R2_ACCOUNT_ID` variables).
 
 **Not publishable yet.** crates.io refuses git dependencies, and these are git tags today:
