@@ -1,0 +1,20 @@
+# typos (https://github.com/crate-ci/typos) configuration.
+
+[files]
+extend-exclude = [
+  "CHANGELOG.md",
+  "**/Cargo.lock",
+  "noir/**/vectors.nr",
+  "rust/emit-circuits/resources/**",
+  "rust/emit-circuits/assets/**",
+  "rust/emit-circuits/circuits/manifest.toml",
+  "rust/emit-protocol-abi/abi/**",
+  "contracts/lib/**",
+]
+
+[default]
+extend-ignore-re = [
+  # Hex constants (digests, domain tags, field elements).
+  "\\b[0-9a-fA-F]{16,}\\b",
+  "0x[0-9a-fA-F]+",
+]

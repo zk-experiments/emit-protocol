@@ -1,0 +1,148 @@
+# Toolchain pins for emit-protocol, the shape of zk-encryption's. `mise run install:zk-toolchain`
+# installs nargo and the noir-zk CLI into per-version directories; every task documents the raw
+# command for non-mise users.
+
+[tools]
+# Solidity: forge for the contracts and the ABI artifact.
+foundry = "1.7.1"
+# S3 client for uploads to the circuits R2 bucket (release:publish-r2).
+aws-cli = "2"
+
+[env]
+# The Noir release every package is compiled and tested with.
+NOIR_VERSION = "1.0.0-rc.3"
+# noir-zk (registries, codegen, the generic kernels) from crates.io; rust/Cargo.toml pins the
+# same version.
+NOIR_ZK_VERSION = "0.3.0"
+# Per-version toolchain directories: this repository never replaces the nargo other projects use.
+NARGO_HOME = "{{env.HOME}}/.toolchains/noir-{{env.NOIR_VERSION}}"
+NARGO = "{{env.NARGO_HOME}}/bin/nargo"
+NOIR_ZK = "{{env.HOME}}/.toolchains/noir-zk-{{env.NOIR_ZK_VERSION}}/bin/noir-zk"
+
+[tasks."install:noir"]
+description = "Install nargo $NOIR_VERSION into $NARGO_HOME (no shell profile changes)"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+mkdir -p "$NARGO_HOME/bin"
+if [ ! -x "$NARGO_HOME/bin/noirup" ]; then
+  curl -fsSL https://raw.githubusercontent.com/noir-lang/noirup/main/noirup -o "$NARGO_HOME/bin/noirup"
+  chmod +x "$NARGO_HOME/bin/noirup"
+fi
+"$NARGO_HOME/bin/noirup" --version "$NOIR_VERSION"
+'''
+
+[tasks."install:noir-zk"]
+description = "Install the noir-zk CLI at the version rust/Cargo.toml pins, in its own toolchain directory"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+root="$HOME/.toolchains/noir-zk-$NOIR_ZK_VERSION"
+[ -x "$root/bin/noir-zk" ] || cargo install --locked noir-zk-cli --version "=$NOIR_ZK_VERSION" --root "$root"
+'''
+
+[tasks."install:zk-toolchain"]
+description = "Install nargo and the noir-zk CLI at the pinned versions"
+depends = ["install:noir", "install:noir-zk"]
+
+[tasks."srs"]
+description = "Provision the SRS noir-zk pins in ~/.bb-crs (freeze derives verification keys with it)"
+run = "scripts/srs.sh"
+
+[tasks."compile"]
+description = "Compile the Noir workspace into noir/target"
+run = 'cd noir && "$NARGO" compile --workspace --silence-warnings'
+
+[tasks."test"]
+description = "Noir, Solidity and Rust tests"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+(cd noir && "$NARGO" test --workspace)
+(cd contracts && forge test)
+(cd rust && cargo test --workspace)
+'''
+
+[tasks."freeze"]
+description = "Freeze the compiled circuits into rust/emit-circuits/{circuits,resources,assets} (bytecode bundled from assets/)"
+depends = ["install:noir-zk"]
+run = '"$NOIR_ZK" freeze --target noir/target --out rust/emit-circuits --assets rust/emit-circuits/assets --library emit-protocol@$(sed -n "s/^version = \"\\(.*\\)\"/\\1/p" rust/emit-circuits/circuits/manifest.toml | head -1)'
+
+[tasks."freeze:check"]
+description = "Check the compiled circuits against their frozen pins"
+depends = ["install:noir-zk"]
+run = '"$NOIR_ZK" freeze --target noir/target --out rust/emit-circuits --assets rust/emit-circuits/assets --library emit-protocol@$(sed -n "s/^version = \"\\(.*\\)\"/\\1/p" rust/emit-circuits/circuits/manifest.toml | head -1) --check'
+
+# The pool's artifact the ABI crate is generated from: its ABI and bytecode only (the rest of the
+# forge artifact is build metadata), so `cargo build` needs no Solidity toolchain.
+[tasks."abi"]
+description = "Rebuild the contracts and write rust/emit-protocol-abi/abi/EmitV2Pool.json"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+(cd contracts && forge build --force >/dev/null)
+jq '{abi, bytecode: {object: .bytecode.object}, deployedBytecode: {object: .deployedBytecode.object}}' \
+  contracts/out/EmitV2Pool.sol/EmitV2Pool.json > rust/emit-protocol-abi/abi/EmitV2Pool.json
+'''
+
+[tasks."abi:check"]
+description = "Fail if the checked-in ABI artifact differs from what the contracts build to"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+(cd contracts && forge build --force >/dev/null)
+jq '{abi, bytecode: {object: .bytecode.object}, deployedBytecode: {object: .deployedBytecode.object}}' \
+  contracts/out/EmitV2Pool.sol/EmitV2Pool.json | diff -q - rust/emit-protocol-abi/abi/EmitV2Pool.json \
+  || { echo "abi/EmitV2Pool.json is stale: mise run abi" >&2; exit 1; }
+'''
+
+# The release assets of the circuits: the frozen manifest, the frozen resources (ABIs and keys)
+# as a tarball with its SHA-256, and catalog.json. `release:publish-r2` puts them under
+# $R2_PREFIX/<version>/ in the circuits bucket (https://circuits.zk-experiments.dev/).
+[tasks."release:assets"]
+description = "Write target/release: manifest.toml, resources.tar.gz (+ .sha256) and catalog.json for this version"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+version="$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -1)"
+rm -rf target/release && mkdir -p target/release
+cp rust/emit-circuits/circuits/manifest.toml target/release/manifest.toml
+tar czf target/release/resources.tar.gz -C rust/emit-circuits resources
+(cd target/release && shasum -a 256 resources.tar.gz | cut -d' ' -f1 > resources.tar.gz.sha256)
+(cd rust && cargo run -q --release -p emit-circuits --bin catalog -- "$version" "$(cat ../target/release/resources.tar.gz.sha256)" > ../target/release/catalog.json)
+ls -l target/release
+'''
+
+[tasks."release:publish-r2"]
+description = "Upload target/release to the circuits R2 bucket under $R2_PREFIX/<version>/ and $R2_PREFIX/latest/"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+: "${R2_BUCKET:?set R2_BUCKET}" "${R2_TOKEN:?set R2_TOKEN}" "${R2_ACCOUNT_ID:?set R2_ACCOUNT_ID}" "${R2_PREFIX:?set R2_PREFIX}"
+# The token is scoped to the bucket, which only R2's S3 API honours: its S3 credentials are the
+# token's id and the SHA-256 of its value (Cloudflare's documented derivation), as zk-encryption's.
+id=""
+for url in "https://api.cloudflare.com/client/v4/accounts/$R2_ACCOUNT_ID/tokens/verify" \
+           "https://api.cloudflare.com/client/v4/user/tokens/verify"; do
+  id="$(curl -fsS -H "Authorization: Bearer $R2_TOKEN" "$url" | jq -r '.result.id // empty' || true)"
+  [ -n "$id" ] && break
+done
+[ -n "$id" ] || { echo "R2_TOKEN doesn't verify with Cloudflare" >&2; exit 1; }
+export AWS_ACCESS_KEY_ID="$id"
+AWS_SECRET_ACCESS_KEY="$(printf '%s' "$R2_TOKEN" | shasum -a 256 | cut -d' ' -f1)"
+export AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION=auto
+export AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+endpoint="https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+version="$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -1)"
+put() {
+  aws s3 cp "$1" "s3://$R2_BUCKET/$2" --endpoint-url "$endpoint" --only-show-errors \
+    --content-type "$3" --cache-control "$4"
+}
+immutable="public, max-age=31536000, immutable"
+put target/release/resources.tar.gz "$R2_PREFIX/$version/resources.tar.gz" application/gzip "$immutable"
+put target/release/resources.tar.gz.sha256 "$R2_PREFIX/$version/resources.tar.gz.sha256" text/plain "$immutable"
+put target/release/manifest.toml "$R2_PREFIX/$version/manifest.toml" application/toml "$immutable"
+put target/release/catalog.json "$R2_PREFIX/$version/catalog.json" application/json "$immutable"
+# latest last, so it only ever points at files already uploaded.
+put target/release/catalog.json "$R2_PREFIX/latest/catalog.json" application/json "public, max-age=300"
+'''

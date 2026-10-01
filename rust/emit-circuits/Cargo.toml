@@ -1,0 +1,28 @@
+[package]
+name = "emit-circuits"
+description = "The Emit V2 protocol's circuits: its emit and identity-cache apps frozen as a noir-zk registry (emit-protocol), eid-circuits' identity layer and zk-encryption's channel layer wrapped, the pipelines, the pins and their loaders"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["zero-knowledge", "noir", "privacy", "passport"]
+categories = ["cryptography"]
+
+[dependencies]
+noir-zk-core.workspace = true
+noir-zk-backend.workspace = true
+eid-circuits.workspace = true
+zk-encryption-circuits.workspace = true
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+toml.workspace = true
+ureq.workspace = true
+
+[build-dependencies]
+noir-zk-codegen.workspace = true
+eid-circuits.workspace = true
+zk-encryption-circuits.workspace = true

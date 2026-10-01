@@ -1,0 +1,419 @@
+# CI + release for emit-protocol (the shape of zk-encryption's ci.yml).
+#
+#   noir ──────┐
+#   contracts ─┤
+#   rust ──────┼─> ci ──> tag (cog, push:main) ──┬─> crates-io (emit-protocol, emit-protocol-abi, emit-circuits) ──┬─> github-release
+#   typos ─────┤                                 └─> publish (circuit assets, R2) ─────────────────────────────────┘
+#   audit ─────┘
+#
+# Everything is published before the GitHub release exists: a release only appears once its
+# crates are on crates.io and its circuit assets answer on the CDN.
+#
+# Triggers
+#   push:main         full pipeline incl. cog auto-bump and, when cog tagged, release
+#   push:tags:["v*"]  release-only path against the named tag
+#   pull_request      checks + commitlint
+#   schedule          nightly cargo audit (fresh advisories)
+#   workflow_dispatch maintainer-named (re-)release; empty `tag` runs the main pipeline
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Existing tag to (re-)release (e.g. "v0.1.0"). Empty input runs the
+          normal main pipeline.
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  resolve:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.r.outputs.release_tag }}
+    steps:
+      - id: r
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag=""
+          case "$EVENT" in
+            push)
+              if [[ "$REF" == refs/tags/v* ]]; then
+                tag="$REF_NAME"
+              fi
+              ;;
+            workflow_dispatch)
+              tag="$INPUT_TAG"
+              ;;
+          esac
+          echo "release_tag=${tag}"
+          echo "release_tag=${tag}" >> "$GITHUB_OUTPUT"
+
+  commitlint:
+    name: Commit lint (conventional-commits)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
+
+  # nargo fmt, nargo test, the circuits compiled and checked against their frozen pins.
+  noir:
+    name: Noir (fmt, test, freeze --check)
+    runs-on: ubuntu-latest
+    needs: [resolve]
+    if: needs.resolve.outputs.release_tag == '' && github.event_name != 'schedule'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v4
+        with:
+          install: false
+      - name: Cache the toolchains
+        id: toolchain-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.toolchains
+          key: toolchains-${{ hashFiles('mise.toml') }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rust-src-dir: rust
+      # The noir-zk CLI links bb's static library against libc++.
+      - name: Install libc++
+        run: sudo apt-get update -q && sudo apt-get install -yq libc++-dev libc++abi-dev
+      - name: Install nargo and the noir-zk CLI
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        run: mise run install:zk-toolchain
+      - name: Toolchain paths
+        run: echo "$(mise env --json | jq -r .NARGO_HOME)/bin" >> "$GITHUB_PATH"
+      - name: nargo fmt --check
+        run: cd noir && nargo fmt --check
+      - name: nargo test
+        run: cd noir && nargo test --workspace
+      - name: nargo compile
+        run: mise run compile
+      - name: Cache the bb CRS
+        uses: actions/cache@v4
+        with:
+          path: ~/.bb-crs
+          key: noir-zk-srs-0f238856e557-72b8cdad9da8
+      - name: Provision the SRS noir-zk pins
+        run: mise run srs
+      - name: The compiled circuits match their frozen pins
+        run: mise run freeze:check
+
+  # forge fmt, forge test, and the ABI crate's artifact against what the contracts build to.
+  contracts:
+    name: Contracts (forge fmt, test, ABI drift)
+    runs-on: ubuntu-latest
+    needs: [resolve]
+    if: needs.resolve.outputs.release_tag == '' && github.event_name != 'schedule'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: jdx/mise-action@v4
+      - name: forge fmt --check
+        run: cd contracts && forge fmt --check
+      - name: forge test
+        run: cd contracts && forge test
+      - name: The ABI artifact is current
+        run: mise run abi:check
+
+  rust:
+    name: Rust (fmt, clippy, test, package)
+    runs-on: ubuntu-latest
+    needs: [resolve]
+    if: needs.resolve.outputs.release_tag == '' && github.event_name != 'schedule'
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+          rust-src-dir: rust
+      # noir-zk-backend links bb's static library against libc++.
+      - name: Install libc++
+        run: sudo apt-get update -q && sudo apt-get install -yq libc++-dev libc++abi-dev
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: cargo test
+        run: cargo test --workspace --locked
+      # emit-protocol is pure: types, encodings, commitments, note math. No transport may enter
+      # its dependency tree; I/O belongs to emit-protocol-abi, emit-circuits or the consumers.
+      - name: emit-protocol stays transport-free
+        run: |
+          set -euo pipefail
+          found="$(cargo tree -p emit-protocol -e normal --prefix none --locked | sed 's/ .*//' | sort -u \
+            | grep -E '^(tokio|tokio-postgres|alloy.*|reqwest|hyper.*|volo.*|tonic|ureq|h2)$' || true)"
+          if [ -n "$found" ]; then echo "::error::transport crates in emit-protocol: $found"; exit 1; fi
+      # The light crate must package (it carries no git dependency once zk-encryption is on
+      # crates.io; until then this step documents the one blocker).
+      - name: cargo package (emit-protocol)
+        run: cargo package -p emit-protocol --locked --no-verify
+
+  typos:
+    name: typos
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: crate-ci/typos@v1.50.2
+        with:
+          config: ./typos.toml
+
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v5
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - name: cargo audit
+        run: cargo audit
+
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [noir, contracts, rust, typos, audit]
+    steps:
+      - name: Check dependency results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$RESULTS" | jq -e 'any(.[]; .result == "failure" or .result == "cancelled")' > /dev/null; then
+            echo "::error::one or more required jobs did not succeed"
+            exit 1
+          fi
+
+  tag:
+    name: Bump version & tag
+    runs-on: ubuntu-latest
+    needs: [resolve, ci]
+    if: |
+      always() &&
+      needs.ci.result == 'success' &&
+      needs.resolve.outputs.release_tag == '' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !startsWith(github.event.head_commit.message, 'chore(version):') &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rust-src-dir: rust
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Cocogitto bump
+        uses: cocogitto/cocogitto-action@v4
+        with:
+          command: bump
+          args: --auto
+          git-user: "github-actions[bot]"
+          git-user-email: "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Resolve created tag (if any)
+        id: bump
+        run: |
+          set -euo pipefail
+          tag="$(git tag --points-at HEAD | grep '^v' | head -n1 || true)"
+          echo "tag=${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+  # The three crates on crates.io, at the released tag, in dependency order: emit-protocol, then
+  # emit-protocol-abi (depends on it), then emit-circuits. A version already published (a
+  # re-release of an existing tag) is skipped: crates.io refuses a second upload anyway.
+  crates-io:
+    name: Publish the crates to crates.io
+    runs-on: ubuntu-latest
+    needs: [resolve, tag]
+    if: |
+      always() &&
+      ((needs.tag.result == 'success' && needs.tag.outputs.tag != '') ||
+       needs.resolve.outputs.release_tag != '')
+    env:
+      TAG: ${{ needs.tag.outputs.tag || needs.resolve.outputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.tag.outputs.tag || needs.resolve.outputs.release_tag }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rust-src-dir: rust
+      - name: Install libc++
+        run: sudo apt-get update -q && sudo apt-get install -yq libc++-dev libc++abi-dev
+      - name: cargo publish
+        working-directory: rust
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          for crate in emit-protocol emit-protocol-abi emit-circuits; do
+            if curl -fsS -A "emit-protocol-ci" "https://crates.io/api/v1/crates/$crate/$version" >/dev/null 2>&1; then
+              echo "$crate $version is already on crates.io"
+              continue
+            fi
+            cargo publish -p "$crate" --locked
+          done
+
+  # The circuit release assets: the frozen manifest, the frozen resources (ABIs and keys) as a
+  # tarball with its SHA-256, and catalog.json, uploaded to the circuits bucket under
+  # https://circuits.zk-experiments.dev/<R2_PREFIX>/<version>/ (and <R2_PREFIX>/latest/catalog.json)
+  # and handed to github-release as a workflow artifact.
+  publish:
+    name: Publish release assets
+    runs-on: ubuntu-latest
+    needs: [resolve, tag]
+    if: |
+      always() &&
+      ((needs.tag.result == 'success' && needs.tag.outputs.tag != '') ||
+       needs.resolve.outputs.release_tag != '')
+    timeout-minutes: 60
+    env:
+      TAG: ${{ needs.tag.outputs.tag || needs.resolve.outputs.release_tag }}
+      R2_PREFIX: ${{ vars.R2_PREFIX_EMIT_PROTOCOL || 'emit-protocol' }}
+      R2_BASE: https://circuits.zk-experiments.dev
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.tag.outputs.tag || needs.resolve.outputs.release_tag }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rust-src-dir: rust
+      - name: Install libc++
+        run: sudo apt-get update -q && sudo apt-get install -yq libc++-dev libc++abi-dev
+      - uses: jdx/mise-action@v4
+      - name: Install nargo and the noir-zk CLI
+        run: mise run install:zk-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bb-crs
+          key: noir-zk-srs-0f238856e557-72b8cdad9da8
+      - name: Compile and check the circuits against their pins
+        run: |
+          mise run compile
+          mise run srs
+          mise run freeze:check
+      - name: Write the release assets
+        run: mise run release:assets
+      - name: Upload to the circuits R2 bucket
+        if: vars.R2_CIRCUITS_ZK_EXPERIMENTS_BUCKET != ''
+        env:
+          R2_TOKEN: ${{ secrets.R2_ZK_EXPERIMENTS_TOKEN }}
+          R2_BUCKET: ${{ vars.R2_CIRCUITS_ZK_EXPERIMENTS_BUCKET }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID || secrets.R2_ACCOUNT_ID }}
+        run: mise run release:publish-r2
+      - name: The published files answer and match the release assets
+        if: vars.R2_CIRCUITS_ZK_EXPERIMENTS_BUCKET != ''
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          base="$R2_BASE/$R2_PREFIX/$version"
+          for _ in 1 2 3 4 5 6; do
+            curl -fsS "$base/catalog.json" -o published-catalog.json && break
+            sleep 10
+          done
+          cmp published-catalog.json target/release/catalog.json
+          curl -fsS "$base/resources.tar.gz" -o published.tar.gz
+          echo "$(cat target/release/resources.tar.gz.sha256)  published.tar.gz" | shasum -a 256 -c
+          curl -fsS "$R2_BASE/$R2_PREFIX/latest/catalog.json" | cmp - target/release/catalog.json
+      - name: Hand the assets to github-release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            target/release/manifest.toml
+            target/release/resources.tar.gz
+            target/release/resources.tar.gz.sha256
+            target/release/catalog.json
+          if-no-files-found: error
+
+  # Last: the release appears only once its crates are on crates.io and its assets are on the CDN,
+  # with the assets attached and the downloads and crates in its notes.
+  github-release:
+    name: Create GitHub release
+    runs-on: ubuntu-latest
+    needs: [resolve, tag, crates-io, publish]
+    if: always() && needs.crates-io.result == 'success' && needs.publish.result == 'success'
+    env:
+      TAG: ${{ needs.tag.outputs.tag || needs.resolve.outputs.release_tag }}
+      R2_PREFIX: ${{ vars.R2_PREFIX_EMIT_PROTOCOL || 'emit-protocol' }}
+      R2_BASE: https://circuits.zk-experiments.dev
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: assets
+      - name: The downloads section of the release notes
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          base="$R2_BASE/$R2_PREFIX/$version"
+          {
+            echo "## Frozen circuits"
+            echo
+            echo "[\`catalog.json\`]($base/catalog.json) (the families, pipelines and roots), [\`manifest.toml\`]($base/manifest.toml), [\`resources.tar.gz\`]($base/resources.tar.gz) (ABIs and verification keys, SHA-256 \`$(cat assets/resources.tar.gz.sha256)\`); the same files are attached to this release. The \`emit-circuits\` crate carries the bytecode and every pin, so the host is a mirror, not a trust anchor."
+            echo
+            echo "## Crates"
+            echo
+            for crate in emit-protocol emit-protocol-abi emit-circuits; do
+              echo "- [\`$crate $version\`](https://crates.io/crates/$crate/$version)"
+            done
+          } > notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          generate_release_notes: true
+          body_path: notes.md
+          files: |
+            assets/manifest.toml
+            assets/resources.tar.gz
+            assets/resources.tar.gz.sha256
+            assets/catalog.json

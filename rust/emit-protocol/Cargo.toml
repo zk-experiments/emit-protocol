@@ -1,0 +1,18 @@
+[package]
+name = "emit-protocol"
+description = "The Emit V2 protocol's values: the 32-byte commitments, the note math (commitments, the refund note, the resolve), the off-chain envelope and its env_commit, and the escrow events — what a wallet, a node or a service shares, with no prover and no chain client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["zero-knowledge", "privacy", "post-quantum", "passport"]
+categories = ["cryptography"]
+
+[dependencies]
+zk-encryption.workspace = true
+ark-ff.workspace = true
+hex.workspace = true
+sha2.workspace = true
+thiserror.workspace = true

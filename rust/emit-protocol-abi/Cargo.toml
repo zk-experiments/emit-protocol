@@ -1,0 +1,17 @@
+[package]
+name = "emit-protocol-abi"
+description = "The Emit V2 pool contract for alloy: EmitV2Pool's bindings (calls, events, deploy from its bytecode) generated from the forge artifact of emit-protocol's contracts, and its escrow events as emit-protocol's"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["zero-knowledge", "privacy", "alloy", "ethereum"]
+categories = ["cryptography"]
+include = ["src/**", "abi/**", "Cargo.toml"]
+
+[dependencies]
+emit-protocol.workspace = true
+alloy.workspace = true
+thiserror.workspace = true

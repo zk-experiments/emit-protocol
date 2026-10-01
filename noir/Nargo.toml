@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "lib/emit",
+    "lib/identity_cache",
+    "circuits/transfer_holder",
+    "circuits/dg1_envelope",
+    "circuits/escrow_resolve",
+    "circuits/register",
+    "circuits/identity_member",
+]

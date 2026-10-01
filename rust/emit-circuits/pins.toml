@@ -1,0 +1,50 @@
+# Everything a deployment of the protocol trusts, in one place. Compiled into emit-circuits
+# (src/pins.rs) and checked at startup by its users (a node, a wallet): local pins against the layers compiled in
+# and the roots the codegen computed, remote ones by fetching each file and checking its SHA-256
+# and contents. Changing a layer's version means changing it here and in Cargo.toml together.
+
+[noir-zk]
+# From crates.io; every layer is bound with it.
+version = "0.3.0"
+# noir-zk-kernels/kernels/step: the last leaf of every pipeline root.
+kernels_family_root = "0x0eb7f8157a5b52a81ce181f7dca9e0190e738dc5cb41dde4d3fdde618b84937f"
+
+[emit]
+# This repository's layers (noir/), frozen by `noir-zk freeze`: the emit apps
+# (emit/transfer_holder, emit/dg1_envelope, emit/escrow_resolve) and the identity cache
+# (identity_cache/register, member).
+library = "emit-protocol@0.1.0"
+[emit.family_roots]
+transfer_holder = "0x18ee3ff5891b3b31c0e0a2c308199a14d141f3417e15679a57a121b8ea86efc7"
+dg1_envelope = "0x0b7d4c28651400e3f6be986bed26deee91932ceaba2ae0c0a78a4eb1435f3119"
+escrow_resolve = "0x04c880b8f7bc783911fc1785899278d8f4339103e13b583774c2d0b369052757"
+register = "0x1d0042a02f44cc3d8f4785950482c4912f71a3af08a7bf31e6680c4f4c81c1eb"
+member = "0x00f3d51011bae30b39267b312d06a7fa58940d423fd8cfac88c450cf1abd0a75"
+
+[zk-encryption]
+# Release v0.1.1 (git tag, on noir-zk 0.3.0). Its frozen registry is still zk-encryption@0.1.0's
+# (the [library] its family roots commit to): the release's catalog lists the same roots.
+release = "0.1.1"
+library = "zk-encryption@0.1.0"
+catalog = "https://circuits.zk-experiments.dev/zk-encryption/0.1.1/catalog.json"
+catalog_sha256 = "d0ff52a1dce5d4db7cdea92c2398a3c8ce28f67f4b8ae77bf9cb2bfae66643b5"
+
+[eid]
+# The identity layer, v0.8.0: its DSC, SOD and document steps from the release's packs.
+library = "eid-circuits@0.8.0"
+packs = "https://circuits.zk-eid.dev"
+catalog = "https://circuits.zk-eid.dev/catalog@0.8.0.json"
+catalog_sha256 = "f91190637a0845061649f7935872e2070468c7bd7b7d9ebe99510178b917e092"
+
+[csca]
+# The published CSCA registry release (the devnet also accepts the synthetic fixtures' root).
+tag = "registry-20260928-1039"
+root = "0x27bef40a340b61d7d2f0b9da4d05fe3f635b272c38292de11dbb50273ec202a2"
+registry = "https://registry.zk-eid.dev/registry-20260928-1039/registry.json"
+registry_sha256 = "17a21c0f7997de83a7ebc9296b6a041dc84286e4805374037faac6dd8bcf4444"
+
+[deployment]
+root = "0x11c8461a719fa22fd4b11f8f2be15bb5d4026701bced5adab97f7f923eff59bd"
+identity_register = { root = "0x22c5c8741fa2ee2efe5245deda2e090b3072b16904159025a154954e0df963c1", length = 4 }
+member_transfer = { root = "0x2d8c95fcf06a54618261626b0e7e3b2b13f8ca65967e952e8c84d3369fb11aef", length = 5 }
+member_resolve = { root = "0x0001d424fb3a298eb126f30b87fa93847e9aa324f97e10a76683970320a62ac4", length = 2 }

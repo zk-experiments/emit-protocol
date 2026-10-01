@@ -1,0 +1,28 @@
+tag_prefix = "v"
+branch_whitelist = ["main"]
+ignore_merge_commits = true
+generate_mono_repository_global_tag = false
+
+# The repository version lives in rust/Cargo.toml [workspace.package] (all three crates share it);
+# the `0,/RE/` range rewrites only its first `^version` line. The frozen library's version in
+# rust/emit-circuits/circuits/manifest.toml moves only when the circuits are refrozen.
+pre_bump_hooks = [
+    "sed -i '0,/^version/{s/^version.*/version = \"{{version}}\"/}' rust/Cargo.toml",
+    "sed -i 's/^emit-protocol = { path = \"emit-protocol\", version = \".*\" }/emit-protocol = { path = \"emit-protocol\", version = \"{{version}}\" }/' rust/Cargo.toml",
+    "cargo update --workspace --manifest-path rust/Cargo.toml",
+]
+
+post_bump_hooks = [
+    "git push origin HEAD:main",
+    "git push origin v{{version}}",
+]
+
+# A dependency or toolchain move (`build:`) changes what consumers link against, so it releases a
+# patch like a fix; so does a circuit made cheaper (`perf:`), refrozen under a new version and key.
+[commit_types]
+build = { changelog_title = "Build", bump_patch = true }
+perf = { changelog_title = "Performance", bump_patch = true }
+
+[changelog]
+path = "CHANGELOG.md"
+authors = []

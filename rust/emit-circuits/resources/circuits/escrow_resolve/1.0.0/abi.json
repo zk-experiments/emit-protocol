@@ -1,0 +1,89 @@
+{
+  "abi_version": 1,
+  "error_types": {
+    "11308939214123006334": {
+      "error_kind": "string",
+      "string": "unknown action"
+    },
+    "12469291177396340830": {
+      "error_kind": "string",
+      "string": "call to assert_max_bit_size"
+    },
+    "18258795424691728048": {
+      "error_kind": "string",
+      "string": "a reject pays no fee"
+    },
+    "7590214540114492284": {
+      "error_kind": "string",
+      "string": "output note below the minimum value"
+    }
+  },
+  "parameters": [
+    {
+      "name": "cid",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "sk",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "value",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "rho",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "r",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "action",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "fee",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "r_out",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    }
+  ],
+  "return_type": {
+    "abi_type": {
+      "kind": "array",
+      "length": 6,
+      "type": {
+        "kind": "field"
+      }
+    },
+    "visibility": "databus"
+  }
+}

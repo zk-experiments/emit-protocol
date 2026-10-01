@@ -1,0 +1,48 @@
+{
+  "abi_version": 1,
+  "error_types": {},
+  "parameters": [
+    {
+      "name": "payload",
+      "type": {
+        "kind": "array",
+        "length": 6,
+        "type": {
+          "kind": "field"
+        }
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "salt",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "context",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    },
+    {
+      "name": "s",
+      "type": {
+        "kind": "field"
+      },
+      "visibility": "private"
+    }
+  ],
+  "return_type": {
+    "abi_type": {
+      "kind": "array",
+      "length": 4,
+      "type": {
+        "kind": "field"
+      }
+    },
+    "visibility": "databus"
+  }
+}
