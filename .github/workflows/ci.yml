@@ -178,9 +178,10 @@ jobs:
           found="$(cargo tree -p emit-protocol -e normal --prefix none --locked | sed 's/ .*//' | sort -u \
             | grep -E '^(tokio|tokio-postgres|alloy.*|reqwest|hyper.*|volo.*|tonic|ureq|h2)$' || true)"
           if [ -n "$found" ]; then echo "::error::transport crates in emit-protocol: $found"; exit 1; fi
-      # The light crate must package (it carries no git dependency once zk-encryption is on
-      # crates.io; until then this step documents the one blocker).
+      # The light crate must package. It can't while zk-encryption is a git dependency (crates.io
+      # refuses those), so the step runs once releases are on (RELEASE_ENABLED, see the README).
       - name: cargo package (emit-protocol)
+        if: vars.RELEASE_ENABLED == 'true'
         run: cargo package -p emit-protocol --locked --no-verify
 
   typos:
