@@ -228,8 +228,12 @@ jobs:
     name: Bump version & tag
     runs-on: ubuntu-latest
     needs: [resolve, ci]
+    # Releases stay off until the repository variable RELEASE_ENABLED is "true": the crates can
+    # only publish once their git dependencies (zk-encryption, zk-encryption-circuits,
+    # eid-circuits) are on crates.io, and a tag without its crates would be a half release.
     if: |
       always() &&
+      vars.RELEASE_ENABLED == 'true' &&
       needs.ci.result == 'success' &&
       needs.resolve.outputs.release_tag == '' &&
       github.event_name == 'push' &&

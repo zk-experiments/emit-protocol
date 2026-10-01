@@ -74,6 +74,10 @@ fails only on that); `emit-circuits` needs `zk-encryption-circuits` and `eid-cir
 The wallet crate must come from the same release as the circuits crate that re-exports it
 (`zk_encryption_circuits::wallet`), or the two copies' types differ: switch them together.
 
+Until then releases are off: the `tag` job runs only when the repository variable
+`RELEASE_ENABLED` is `true`. Set it once the dependencies are on crates.io; every push to `main`
+still runs the checks.
+
 ## The contract
 
 `EmitV2Pool` (inherits `IMT`), constructor `(bytes32 deploymentRoot, bytes32 registerPipeline, bytes32 memberPipeline, bytes32 resolvePipeline, uint256 escrowWindow)` (the roots of `identity_register`, `member_transfer`, `member_resolve`, and how long an escrow waits for its owner); it deploys its `IdentityTree` (an `IMT` only the pool appends to).
