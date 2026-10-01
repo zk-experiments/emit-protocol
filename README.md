@@ -10,6 +10,9 @@ owner resolves it.
 Deployments and services build on it: [emit-devnet](https://github.com/zk-experiments/emit-devnet)
 runs it on a local chain with a console wallet, and envelope-inbox delivers the envelopes.
 
+The whole sequence (setup, transfer, escrow, resolve), what the chain enforces, and what an
+off-chain transport must and should do: [`PROTOCOL.md`](PROTOCOL.md).
+
 ## Layers
 
 | Layer | What it is | Where |
