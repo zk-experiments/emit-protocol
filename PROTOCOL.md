@@ -286,10 +286,13 @@ transport is subject to data protection law even though it cannot read what it s
 
 5. **No identity for depositing.** S deposits without any credential that identifies it.
    Requiring one would link S to the transfer at R's provider.
-6. **Capability-gated reads.** Fetching and deleting require a token derived from the channel
-   secret, which only S and R know: for example `H(domain, Z)` on a handshake and
-   `H(domain, S_t)` on a ratchet transfer, with the domain chosen by the transport. Store only a
-   hash of the token. Compare it in constant time. Answer an unknown `C_t`, a closed escrow and a
+6. **Capability-gated reads, no reader identity either.** Fetching, deleting and listing which
+   envelopes wait all require a token derived from the channel secret, which only S and R know:
+   for example `H(domain, Z)` on a handshake and `H(domain, S_t)` on a ratchet transfer, with the
+   domain chosen by the transport. R lists by sending its window's `(C_t, token)` pairs, never a
+   wallet credential (that would tie R's wallet to its chain commitments), and never by a
+   bundle's public `notify_id` (R finds a first contact on-chain by its tag). Store only a hash
+   of the token. Compare it in constant time. Answer an unknown `C_t`, a closed escrow and a
    wrong token identically, so there is no oracle.
 7. **Idempotent deposits.** An identical retry, even after a close or a discard, is a duplicate,
    not an error.
