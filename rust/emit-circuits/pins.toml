@@ -5,9 +5,9 @@
 
 [noir-zk]
 # From crates.io; every layer is bound with it.
-version = "0.3.0"
+version = "0.3.3"
 # noir-zk-kernels/kernels/step: the last leaf of every pipeline root.
-kernels_family_root = "0x0eb7f8157a5b52a81ce181f7dca9e0190e738dc5cb41dde4d3fdde618b84937f"
+kernels_family_root = "0x297133fa2fe6ee1897087e26d3c5e6d6a1316195d7fad3d34809c182a341ae43"
 
 [emit]
 # This repository's layers (noir/), frozen by `noir-zk freeze`: the emit apps
@@ -22,19 +22,22 @@ register = "0x1d0042a02f44cc3d8f4785950482c4912f71a3af08a7bf31e6680c4f4c81c1eb"
 member = "0x00f3d51011bae30b39267b312d06a7fa58940d423fd8cfac88c450cf1abd0a75"
 
 [zk-encryption]
-# Release v0.1.1 (git tag, on noir-zk 0.3.0). Its frozen registry is still zk-encryption@0.1.0's
-# (the [library] its family roots commit to): the release's catalog lists the same roots.
-release = "0.1.1"
-library = "zk-encryption@0.1.0"
-catalog = "https://circuits.zk-experiments.dev/zk-encryption/0.1.1/catalog.json"
-catalog_sha256 = "d0ff52a1dce5d4db7cdea92c2398a3c8ce28f67f4b8ae77bf9cb2bfae66643b5"
+# zk-encryption-circuits 0.1.5 (crates.io, on noir-zk 0.3.3). Its frozen registry is
+# zk-encryption@0.1.3's (the [library] its family roots commit to): the release's catalog lists the
+# same roots.
+release = "0.1.5"
+library = "zk-encryption@0.1.3"
+catalog = "https://circuits.zk-experiments.dev/zk-encryption/0.1.5/catalog.json"
+catalog_sha256 = "b797c5ed611f2898fa22cdc30e1d40087c3460fe31006a7d567878fc10a4bb81"
 
 [eid]
-# The identity layer, v0.8.0: its DSC, SOD and document steps from the release's packs.
-library = "eid-circuits@0.8.0"
+# The identity layer: eid-circuits 0.8.3 (crates.io), whose frozen registry is still
+# eid-circuits@0.8.2's (0.8.3 changed the release pipeline, not the circuits): its DSC, SOD and
+# document steps come from the 0.8.2 packs, which carry the same pinned bytecode.
+library = "eid-circuits@0.8.2"
 packs = "https://circuits.zk-eid.dev"
-catalog = "https://circuits.zk-eid.dev/catalog@0.8.0.json"
-catalog_sha256 = "f91190637a0845061649f7935872e2070468c7bd7b7d9ebe99510178b917e092"
+catalog = "https://circuits.zk-eid.dev/catalog@0.8.2.json"
+catalog_sha256 = "4de0e4f0a6a03e64e7cdcf0c724901c6b2cb0f742184a46d750f935c856753eb"
 
 [csca]
 # The published CSCA registry release (the devnet also accepts the synthetic fixtures' root).
@@ -44,7 +47,7 @@ registry = "https://registry.zk-eid.dev/registry-20260928-1039/registry.json"
 registry_sha256 = "17a21c0f7997de83a7ebc9296b6a041dc84286e4805374037faac6dd8bcf4444"
 
 [deployment]
-root = "0x11c8461a719fa22fd4b11f8f2be15bb5d4026701bced5adab97f7f923eff59bd"
-identity_register = { root = "0x22c5c8741fa2ee2efe5245deda2e090b3072b16904159025a154954e0df963c1", length = 4 }
-member_transfer = { root = "0x2d8c95fcf06a54618261626b0e7e3b2b13f8ca65967e952e8c84d3369fb11aef", length = 5 }
-member_resolve = { root = "0x0001d424fb3a298eb126f30b87fa93847e9aa324f97e10a76683970320a62ac4", length = 2 }
+root = "0x02d515b4c11b8b715af4d6fa14644a3e7e8dcc52dd9923f3424f1304561da88a"
+identity_register = { root = "0x0a2bcc6a85b08c9ee3046ec9387b53a583e188447c51ce7a45cc989702e855cf", length = 4 }
+member_transfer = { root = "0x0185c63e50408ddc230b73c27e117be74fe278a964be0e45def5cdc527a8ee6c", length = 5 }
+member_resolve = { root = "0x23173a425869da40ad85bb78639280b69ccc656121c183cfba1e6e575bcd6853", length = 2 }

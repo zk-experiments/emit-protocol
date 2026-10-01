@@ -178,10 +178,8 @@ jobs:
           found="$(cargo tree -p emit-protocol -e normal --prefix none --locked | sed 's/ .*//' | sort -u \
             | grep -E '^(tokio|tokio-postgres|alloy.*|reqwest|hyper.*|volo.*|tonic|ureq|h2)$' || true)"
           if [ -n "$found" ]; then echo "::error::transport crates in emit-protocol: $found"; exit 1; fi
-      # The light crate must package. It can't while zk-encryption is a git dependency (crates.io
-      # refuses those), so the step runs once releases are on (RELEASE_ENABLED, see the README).
+      # The light crate must package (every dependency on crates.io).
       - name: cargo package (emit-protocol)
-        if: vars.RELEASE_ENABLED == 'true'
         run: cargo package -p emit-protocol --locked --no-verify
 
   typos:
@@ -229,9 +227,8 @@ jobs:
     name: Bump version & tag
     runs-on: ubuntu-latest
     needs: [resolve, ci]
-    # Releases stay off until the repository variable RELEASE_ENABLED is "true": the crates can
-    # only publish once their git dependencies (zk-encryption, zk-encryption-circuits,
-    # eid-circuits) are on crates.io, and a tag without its crates would be a half release.
+    # Releases stay off until the repository variable RELEASE_ENABLED is "true" (the maintainers
+    # turn them on); every push still runs the checks.
     if: |
       always() &&
       vars.RELEASE_ENABLED == 'true' &&

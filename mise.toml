@@ -13,7 +13,7 @@ aws-cli = "2"
 NOIR_VERSION = "1.0.0-rc.3"
 # noir-zk (registries, codegen, the generic kernels) from crates.io; rust/Cargo.toml pins the
 # same version.
-NOIR_ZK_VERSION = "0.3.0"
+NOIR_ZK_VERSION = "0.3.3"
 # Per-version toolchain directories: this repository never replaces the nargo other projects use.
 NARGO_HOME = "{{env.HOME}}/.toolchains/noir-{{env.NOIR_VERSION}}"
 NARGO = "{{env.NARGO_HOME}}/bin/nargo"

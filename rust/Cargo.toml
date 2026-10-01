@@ -11,18 +11,17 @@ repository = "https://github.com/zk-experiments/emit-protocol"
 
 [workspace.dependencies]
 emit-protocol = { path = "emit-protocol", version = "0.1.0" }
-# noir-zk 0.3.0 (crates.io): layered registries, the generic pipeline kernels, Chonk via bb's FFI.
+# noir-zk 0.3.3 (crates.io): layered registries, the generic pipeline kernels, Chonk via bb's FFI.
 # Every layer below is bound with the same release.
-noir-zk-core = "=0.3.0"
-noir-zk-backend = { version = "=0.3.0", features = ["packs", "http"] }
-noir-zk-codegen = "=0.3.0"
-# The identity layer: eid-circuits v0.8.0 (noir-zk 0.3.0; families eid/dsc, eid/sod, eid/document).
-eid-circuits = { git = "https://github.com/zk-experiments/eid-circuits", tag = "v0.8.0", features = ["packs", "http"] }
-# The channel layer: zk-encryption v0.1.1 (on noir-zk 0.3.0; its frozen registry is still
-# zk-encryption@0.1.0's: the circuits, their pins and family roots unchanged; bytecode bundled).
-# The wallet crate comes from the same tag, so its types are the ones the circuits crate re-exports.
-zk-encryption-circuits = { git = "https://github.com/zk-experiments/zk-encryption", tag = "v0.1.1", features = ["serde"] }
-zk-encryption = { git = "https://github.com/zk-experiments/zk-encryption", tag = "v0.1.1" }
+noir-zk-core = "=0.3.3"
+noir-zk-backend = { version = "=0.3.3", features = ["packs", "http"] }
+noir-zk-codegen = "=0.3.3"
+# The identity layer: eid-circuits 0.8.3 (families eid/dsc, eid/sod, eid/document).
+eid-circuits = { version = "=0.8.3", features = ["packs", "http"] }
+# The channel layer: zk-encryption-circuits 0.1.5 (bytecode bundled). The wallet crate is the one
+# it re-exports (a 0.1 range, so one copy of the wallet types).
+zk-encryption-circuits = { version = "=0.1.5", features = ["serde"] }
+zk-encryption = "0.1.5"
 alloy = { version = "2.5.0", default-features = false, features = ["sol-types", "contract", "rpc-types", "json-abi"] }
 ark-ff = "0.6"
 hex = "0.4"

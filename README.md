@@ -37,7 +37,7 @@ scripts/srs.sh            the SRS noir-zk pins, into ~/.bb-crs
 |---|---|---|
 | `emit-protocol` | zk-encryption | `ChainCommitment`, `NoteCommitment`, `EnvCommit` (32 bytes, ↔ `Fr`) and the `bytes32!` macro; `note`: the refund note, the resolve (`Resolve`, `Action`), `MIN_NOTE_VALUE`, zk-encryption's `Emit` re-exported; `Envelope` with `cid_commit` / `commit` (the golden vector lives here); `EscrowLog` / `EscrowEventKind` |
 | `emit-protocol-abi` | emit-protocol, alloy | `EmitV2Pool` (every call and event, `deploy` from the bytecode), `escrow_log` (a pool log as an `EscrowLog`), `ESCROW_TOPICS` |
-| `emit-circuits` | noir-zk 0.3.0, eid-circuits 0.8.0, zk-encryption-circuits 0.1.1 | `circuits::{pipelines, FAMILIES, DEPLOYMENT, DEPLOYMENT_ROOT}` (fold and verify `identity_register`, `member_transfer`, `member_resolve`), `pins` (`pins.toml` and its check), `setup` (the artifacts a fold draws from, from the registries' CDNs), `verify`, the `catalog` binary |
+| `emit-circuits` | noir-zk 0.3.3, eid-circuits 0.8.3, zk-encryption-circuits 0.1.5 (all crates.io) | `circuits::{pipelines, FAMILIES, DEPLOYMENT, DEPLOYMENT_ROOT}` (fold and verify `identity_register`, `member_transfer`, `member_resolve`), `pins` (`pins.toml` and its check), `setup` (the artifacts a fold draws from, from the registries' CDNs), `verify`, the `catalog` binary |
 
 ## Roots (`rust/emit-circuits/pins.toml`)
 
@@ -45,13 +45,13 @@ scripts/srs.sh            the SRS noir-zk pins, into ~/.bb-crs
 |---|---|
 | library | `emit-protocol@0.1.0` |
 | families | `transfer_holder` `0x18ee3ff5…efc7`, `dg1_envelope` `0x0b7d4c28…3119`, `escrow_resolve` `0x04c880b8…2757`, `register` `0x1d0042a0…c1eb`, `member` `0x00f3d510…0a75` |
-| deployment | `0x11c8461a…59bd` |
-| pipelines | `identity_register` `0x22c5c874…63c1` (4), `member_transfer` `0x2d8c95fc…1aef` (5), `member_resolve` `0x0001d424…2ac4` (2) |
+| deployment | `0x02d515b4…a88a` |
+| pipelines | `identity_register` `0x0a2bcc6a…55cf` (4), `member_transfer` `0x0185c63e…ee6c` (5), `member_resolve` `0x23173a42…6853` (2) |
 
 ## Building and checking
 
 ```sh
-mise install && mise run install:zk-toolchain   # foundry, nargo 1.0.0-rc.3, noir-zk 0.3.0
+mise install && mise run install:zk-toolchain   # foundry, nargo 1.0.0-rc.3, noir-zk 0.3.3
 mise run test                                   # nargo test, forge test, cargo test
 mise run compile && mise run srs && mise run freeze:check   # the circuits against their frozen keys
 mise run abi:check                              # abi/EmitV2Pool.json against forge build
@@ -70,16 +70,10 @@ before the GitHub release exists, publishes the crates to crates.io in dependenc
 The GitHub release comes last, with the assets attached. Secrets: `CRATES_PUBLISHING_TOKEN` (the crates.io token),
 `R2_ZK_EXPERIMENTS_TOKEN` (with the `R2_CIRCUITS_ZK_EXPERIMENTS_BUCKET` and `R2_ACCOUNT_ID` variables).
 
-**Not publishable yet.** crates.io refuses git dependencies, and these are git tags today:
-`zk-encryption` and `zk-encryption-circuits` (v0.1.1) and `eid-circuits` (v0.8.0). `emit-protocol` and
-`emit-protocol-abi` can publish once `zk-encryption` is on crates.io (`cargo publish --dry-run`
-fails only on that); `emit-circuits` needs `zk-encryption-circuits` and `eid-circuits` there too.
-The wallet crate must come from the same release as the circuits crate that re-exports it
-(`zk_encryption_circuits::wallet`), or the two copies' types differ: switch them together.
-
-Until then releases are off: the `tag` job runs only when the repository variable
-`RELEASE_ENABLED` is `true`. Set it once the dependencies are on crates.io; every push to `main`
-still runs the checks.
+Every dependency is on crates.io: `zk-encryption` and `zk-encryption-circuits` 0.1.5 (the wallet
+crate is the one the circuits crate re-exports, so both resolve to one copy), `eid-circuits` 0.8.3,
+noir-zk 0.3.3. The first release is still off: the `tag` job runs only when the repository
+variable `RELEASE_ENABLED` is `true`; every push to `main` runs the checks.
 
 ## The contract
 
@@ -120,7 +114,7 @@ The passport is proved once per registration (eid's DSC, SOD and document steps:
 | `dg1_envelope` | `emit/dg1_envelope`: link in 0 (`PayloadCommitment`), binds `ctx` (1) and `c_t` (2), public `cid_commit` | `[payload_commitment, ctx, C_t, cid_commit]` | 339 |
 | `escrow_resolve` | `emit/escrow_resolve`: binds `holder_tag` (0), public `cid`, `c0`, `action`, `c_out`, `fee` | `[holder_tag, cid, C₀, action, c_out, fee]` | 3,025 |
 
-- `register(payload_salt, dg1, sk, expiry, r)` parses the DG1 bytes with eid's own `parse_dg1` (eid-circuits v0.8.0's `eid_steps`), rebuilds the payload with eid's `plaintext` and recomputes `commit(payload_salt, payload)`, which the kernel checks equals the document step's link; asserts `expiry ≤` the passport's date of expiry (the MRZ's, last second, UTC); publishes the leaf `L = H(IDENTITY, H(PK, sk), H(payload), expiry, r)` (`IDENTITY = "emit-v2/identity/v2"`; the holder's shielded address, the six-field DG1 payload hashed, the expiry, and `r`, a uniform random blinding the wallet draws and keeps) and `expiry`. The blinding is what keeps the registration private: the holder hands the shielded address to anyone who pays them, and a payee reads the MRZ from their envelopes, so without `r` either could recompute `L` and find the registration. It is the fifth input, which costs one gate: Poseidon2 absorbs three per permutation, so four inputs and five both take two.
+- `register(payload_salt, dg1, sk, expiry, r)` parses the DG1 bytes with eid's own `parse_dg1` (eid-circuits v0.8.3's `eid_steps`), rebuilds the payload with eid's `plaintext` and recomputes `commit(payload_salt, payload)`, which the kernel checks equals the document step's link; asserts `expiry ≤` the passport's date of expiry (the MRZ's, last second, UTC); publishes the leaf `L = H(IDENTITY, H(PK, sk), H(payload), expiry, r)` (`IDENTITY = "emit-v2/identity/v2"`; the holder's shielded address, the six-field DG1 payload hashed, the expiry, and `r`, a uniform random blinding the wallet draws and keeps) and `expiry`. The blinding is what keeps the registration private: the holder hands the shielded address to anyone who pays them, and a payee reads the MRZ from their envelopes, so without `r` either could recompute `L` and find the registration. It is the fifth input, which costs one gate: Poseidon2 absorbs three per permutation, so four inputs and five both take two.
 - `identity_member(identity_root, date, sk, payload, payload_salt, expiry, r, index, path, ctx)` recomputes the leaf (a wrong `r` gives another leaf, not in the tree), checks its depth-32 path to `identity_root` and `date ≤ expiry`, and returns a fresh `commit(payload_salt, payload)` as its link (the DG1 envelope continues it unchanged) and the holder tag `H(HOLDER, sk, ctx)` (`HOLDER = "emit-v2/holder"`).
 - `transfer_holder` is the JoinSplit (`emit::transfer`) with `ins[0].sk = ins[1].sk` (dummies included), every output value 0 or at least `MIN_NOTE_VALUE` (1/3 ETH in wei, 104 gates), and `holder_tag = H(HOLDER, ins[0].sk, ctx)` in its record; the kernel binds it to the member's published tag, and `ctx` to the session's. It also publishes the refund note of the escrowed C₀: `C_r = H(COMMITMENT, cid, H(PK, ins[0].sk), v'₀, H(RHO, N₀, 2), r_r)` (output 0's value for the sender's key; the third rho of N₀, so it never shares a nullifier with C₀ or C₁). `ctx` stays `H(CTX, cid, N₀, N₁, C₀, C₁)`: C_r is bound by being a public output of the same proof.
 - `dg1_envelope(payload, salt, context, s)` seals DG1 exactly as the channel's payload envelope does (`seal_keyed` under `KEY_PAYLOAD`, so the receiver opens it unchanged) and publishes only `cid_commit = H("emit-v2/dg1-envelope", c_id)`. It continues the membership app's fresh DG1 commitment and is bound to the session's `ctx` and `C_t`. (It can't also bind `ct_commitment`: a position binds at most two slots. The pool combines the two instead.)

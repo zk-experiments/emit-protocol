@@ -1924,8 +1924,9 @@ dependencies = [
 
 [[package]]
 name = "eid-circuits"
-version = "0.8.0"
-source = "git+https://github.com/zk-experiments/eid-circuits?tag=v0.8.0#7289e47a4056a5229b6eaedc03fbf48d8bf35af9"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e4d01a2a6dd6e68cb7f7c84e6248acc14e52643f458535be7ee672dada3d6bc"
 dependencies = [
  "hex",
  "noir-zk-backend",
@@ -3039,9 +3040,9 @@ dependencies = [
 
 [[package]]
 name = "noir-zk-backend"
-version = "0.3.0"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eb67f284245690f87732dc983dc86b302339bb2e55c3e1cfe6520c5d2eb536d"
+checksum = "edc2f00dac0942afb6dd6281857101adbed6d8a39c78562f40edc21a557f04a6"
 dependencies = [
  "acir",
  "acvm",
@@ -3063,23 +3064,27 @@ dependencies = [
 
 [[package]]
 name = "noir-zk-codegen"
-version = "0.3.0"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6b989d788696e32fe71dc56c628d44355149d5f6ff14f8c5a524e59d377c72b"
+checksum = "ee1717923eea8c2bf18568f79908fc4ddeffa1aa8235220e1e657b074d41cdc0"
 dependencies = [
  "hex",
  "noir-zk-core",
  "noir-zk-kernels",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
  "serde_json",
  "sha2 0.10.9",
+ "syn 3.0.6",
  "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
 name = "noir-zk-core"
-version = "0.3.0"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9362e048fb6615f247bd3990c06f3d3489ba7319dcb657efa25250918195540"
+checksum = "de4caf35cd5ff9f2ad255a03e932099ac12eda64dcffffdca61ba7126be9713f"
 dependencies = [
  "ark-bn254",
  "ark-ff 0.6.0",
@@ -3088,9 +3093,9 @@ dependencies = [
 
 [[package]]
 name = "noir-zk-kernels"
-version = "0.3.0"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49f65e1f4c4add7de04e57af2eb7f1ee573cb6a5d9a4496f3a032998855aba4f"
+checksum = "c426962f3d5ad568094e46288f13cc2c78f3a77e2f12152ad041f5fc8ef48b73"
 dependencies = [
  "hex",
  "noir-zk-core",
@@ -3396,6 +3401,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
+]
+
+[[package]]
+name = "prettyplease"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bfe0f4c752e450fc2faf62654f1c134747922825d5b04ca717b8874f41a40c0"
+dependencies = [
+ "proc-macro2",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -5228,8 +5243,9 @@ dependencies = [
 
 [[package]]
 name = "zk-encryption"
-version = "0.1.0"
-source = "git+https://github.com/zk-experiments/zk-encryption?tag=v0.1.1#82f95938b23b12fd02a9c869f1d097d41a31899b"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2f4222b11ca2a9ae6fe7e800ace8954c0acd7d774c77a9f26b225a3091c2e2d"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -5246,8 +5262,9 @@ dependencies = [
 
 [[package]]
 name = "zk-encryption-circuits"
-version = "0.1.0"
-source = "git+https://github.com/zk-experiments/zk-encryption?tag=v0.1.1#82f95938b23b12fd02a9c869f1d097d41a31899b"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93e05e7977a49df04895683050e0a2db31cc1596dadfce1f75178ee6ddbbc72e"
 dependencies = [
  "ark-ff 0.6.0",
  "hex",
