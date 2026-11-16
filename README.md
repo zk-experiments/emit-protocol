@@ -24,7 +24,7 @@ off-chain transport must and should do: [`PROTOCOL.md`](PROTOCOL.md).
 ## Layout
 
 ```
-noir/                     the emit and identity_cache libraries and their five apps (nargo 1.0.0-rc.3)
+noir/                     the emit and identity_cache libraries and their five apps (nargo 1.0.0-rc.5)
 contracts/                EmitV2Pool.sol, IMT.sol, their forge tests (forge-std as a submodule)
 rust/emit-protocol/       the protocol's values (no prover, no chain client)
 rust/emit-protocol-abi/   EmitV2Pool for alloy: abi/EmitV2Pool.json (the forge artifact's ABI and bytecode)
@@ -37,7 +37,7 @@ scripts/srs.sh            the SRS noir-zk pins, into ~/.bb-crs
 |---|---|---|
 | `emit-protocol` | zk-encryption | `ChainCommitment`, `NoteCommitment`, `EnvCommit` (32 bytes, ↔ `Fr`) and the `bytes32!` macro; `note`: the refund note, the resolve (`Resolve`, `Action`), `MIN_NOTE_VALUE`, zk-encryption's `Emit` re-exported; `Envelope` with `cid_commit` / `commit` (the golden vector lives here); `EscrowLog` / `EscrowEventKind` |
 | `emit-protocol-abi` | emit-protocol, alloy | `EmitV2Pool` (every call and event, `deploy` from the bytecode), `escrow_log` (a pool log as an `EscrowLog`), `ESCROW_TOPICS` |
-| `emit-circuits` | noir-zk 0.3.3, eid-circuits 0.8.3, zk-encryption-circuits 0.1.5 (all crates.io) | `circuits::{pipelines, FAMILIES, DEPLOYMENT, DEPLOYMENT_ROOT}` (fold and verify `identity_register`, `member_transfer`, `member_resolve`), `pins` (`pins.toml` and its check), `setup` (the artifacts a fold draws from, from the registries' CDNs), `verify`, the `catalog` binary |
+| `emit-circuits` | noir-zk 0.3.3 (patched to noir-zk#11: bb 7.0.0-nightly.20261110), eid-circuits 0.8.3, zk-encryption-circuits 0.1.5 (all crates.io) | `circuits::{pipelines, FAMILIES, DEPLOYMENT, DEPLOYMENT_ROOT}` (fold and verify `identity_register`, `member_transfer`, `member_resolve`), `pins` (`pins.toml` and its check), `setup` (the artifacts a fold draws from, from the registries' CDNs), `verify`, the `catalog` binary |
 
 ## Roots (`rust/emit-circuits/pins.toml`)
 
@@ -45,13 +45,13 @@ scripts/srs.sh            the SRS noir-zk pins, into ~/.bb-crs
 |---|---|
 | library | `emit-protocol@0.1.0` |
 | families | `transfer_holder` `0x18ee3ff5…efc7`, `dg1_envelope` `0x0b7d4c28…3119`, `escrow_resolve` `0x04c880b8…2757`, `register` `0x1d0042a0…c1eb`, `member` `0x00f3d510…0a75` |
-| deployment | `0x02d515b4…a88a` |
-| pipelines | `identity_register` `0x0a2bcc6a…55cf` (4), `member_transfer` `0x0185c63e…ee6c` (5), `member_resolve` `0x23173a42…6853` (2) |
+| deployment | `0x2beb20f9…1baf` |
+| pipelines | `identity_register` `0x069782dc…1a0e` (4), `member_transfer` `0x22f795d8…6596` (5), `member_resolve` `0x285c421a…1af2` (2) |
 
 ## Building and checking
 
 ```sh
-mise install && mise run install:zk-toolchain   # foundry, nargo 1.0.0-rc.3, noir-zk 0.3.3
+mise install && mise run install:zk-toolchain   # foundry, nargo 1.0.0-rc.5, noir-zk 0.3.3
 mise run test                                   # nargo test, forge test, cargo test
 mise run compile && mise run srs && mise run freeze:check   # the circuits against their frozen keys
 mise run abi:check                              # abi/EmitV2Pool.json against forge build

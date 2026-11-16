@@ -4,10 +4,10 @@
 # and contents. Changing a layer's version means changing it here and in Cargo.toml together.
 
 [noir-zk]
-# From crates.io; every layer is bound with it.
-version = "0.3.3"
+# noir-zk-kernels 0.4.0 (noir-zk#11, bb 7.0.0-nightly.20261110; patched in from git until released).
+version = "0.4.0"
 # noir-zk-kernels/kernels/step: the last leaf of every pipeline root.
-kernels_family_root = "0x297133fa2fe6ee1897087e26d3c5e6d6a1316195d7fad3d34809c182a341ae43"
+kernels_family_root = "0x094a0086ffefdd08dfaafd378a562fdaa97806124d4476a205218b2285735701"
 
 [emit]
 # This repository's layers (noir/), frozen by `noir-zk freeze`: the emit apps
@@ -47,7 +47,7 @@ registry = "https://registry.zk-eid.dev/registry-20260928-1039/registry.json"
 registry_sha256 = "17a21c0f7997de83a7ebc9296b6a041dc84286e4805374037faac6dd8bcf4444"
 
 [deployment]
-root = "0x02d515b4c11b8b715af4d6fa14644a3e7e8dcc52dd9923f3424f1304561da88a"
-identity_register = { root = "0x0a2bcc6a85b08c9ee3046ec9387b53a583e188447c51ce7a45cc989702e855cf", length = 4 }
-member_transfer = { root = "0x0185c63e50408ddc230b73c27e117be74fe278a964be0e45def5cdc527a8ee6c", length = 5 }
-member_resolve = { root = "0x23173a425869da40ad85bb78639280b69ccc656121c183cfba1e6e575bcd6853", length = 2 }
+root = "0x2beb20f9f1597700f9338a78c3e70967f2f9b10a91341faa9c6a8c89c84e1baf"
+identity_register = { root = "0x069782dc3636269cc75fd9feafabb5cae7f4df81e7b11c90248b379b36b41a0e", length = 4 }
+member_transfer = { root = "0x22f795d8c0f659fccc7ef8fce423d7f95dcf81faa7b918a54bfac39470d16596", length = 5 }
+member_resolve = { root = "0x285c421af2895cd9adaeff4ed5a3aa2baa7f9fc701f579fa2bbfd3f53cf71af2", length = 2 }

@@ -10,7 +10,7 @@ aws-cli = "2"
 
 [env]
 # The Noir release every package is compiled and tested with.
-NOIR_VERSION = "1.0.0-rc.3"
+NOIR_VERSION = "1.0.0-rc.5"
 # noir-zk (registries, codegen, the generic kernels) from crates.io; rust/Cargo.toml pins the
 # same version.
 NOIR_ZK_VERSION = "0.3.3"

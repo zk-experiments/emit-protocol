@@ -36,3 +36,11 @@ ureq = { version = "3", default-features = false, features = ["rustls"] }
 # Witness solving and proving are unusably slow unoptimised (noir-zk's note).
 [profile.dev]
 opt-level = 3
+
+# noir-zk on bb 7.0.0-nightly.20261110 / Noir 1.0.0-rc.5 (zk-experiments/noir-zk#11), until it is
+# released: one noir-zk for every layer, eid-circuits' and zk-encryption's =0.3.3 included.
+[patch.crates-io]
+noir-zk-core = { git = "https://github.com/zk-experiments/noir-zk", rev = "0d022abf80cec1f2e28a7bc2008d0579af4ae141" }
+noir-zk-kernels = { git = "https://github.com/zk-experiments/noir-zk", rev = "0d022abf80cec1f2e28a7bc2008d0579af4ae141" }
+noir-zk-backend = { git = "https://github.com/zk-experiments/noir-zk", rev = "0d022abf80cec1f2e28a7bc2008d0579af4ae141" }
+noir-zk-codegen = { git = "https://github.com/zk-experiments/noir-zk", rev = "0d022abf80cec1f2e28a7bc2008d0579af4ae141" }
